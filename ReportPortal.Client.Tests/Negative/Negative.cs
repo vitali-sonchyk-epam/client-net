@@ -19,7 +19,7 @@ namespace ReportPortal.Client.Tests
         [Fact]
         public async Task IncorrectUrlInCorrectHost()
         {
-            var service = new Service(new Uri("https://rp.epam.com/api/blabla/"), "p", "t");
+            var service = new Service(new Uri("https://rp.epam.com/api/blabla/"), "p", "p");
             await Assert.ThrowsAsync<SerializationException>(async () => await service.StartLaunchAsync(new StartLaunchRequest { Name = "abc" }));
         }
 
