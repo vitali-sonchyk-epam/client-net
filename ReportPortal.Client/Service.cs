@@ -2,8 +2,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading.Tasks;
-using System.Threading;
+using ReportPortal.Client.Extentions;
 
 namespace ReportPortal.Client
 {
@@ -21,9 +20,14 @@ namespace ReportPortal.Client
         /// <param name="project">A project to manage.</param>
         /// <param name="password">A password for user. Can be UID given from user's profile page.</param>
         /// <param name="messageHandler">The HTTP handler to use for sending all requests.</param>
-        public Service(Uri uri, string project, string password, HttpMessageHandler messageHandler)
+        public Service(Uri uri, string project, string password)
         {
-            _httpClient = new HttpClient(messageHandler);
+            _httpClient = new HttpClient();
+            
+            if (!uri.LocalPath.ToLowerInvariant().Contains("api/v1"))
+            {
+                uri = uri.Append("api/v1");
+            }
             _httpClient.BaseAddress = uri;
 
             _httpClient.DefaultRequestHeaders.Clear();
@@ -44,21 +48,26 @@ namespace ReportPortal.Client
         /// <param name="uri">Base URI for REST service.</param>
         /// <param name="project">A project to manage.</param>
         /// <param name="password">A password for user. Can be UID given from user's profile page.</param>
-        public Service(Uri uri, string project, string password)
-            : this(uri, project, password, new RetryWithExponentialBackoffHttpClientHandler())
+        /// <param name="proxy">Proxy for all HTTP requests.</param>
+        public Service(Uri uri, string project, string password, IWebProxy proxy)
+            : this(uri, project, password)
         {
+
         }
 
         /// <summary>
-        /// Constructor to initialize a new object of service.
+        /// Timeout for http requests.
         /// </summary>
-        /// <param name="uri">Base URI for REST service.</param>
-        /// <param name="project">A project to manage.</param>
-        /// <param name="password">A password for user. Can be UID given from user's profile page.</param>
-        /// <param name="proxy">Proxy for all HTTP requests.</param>
-        public Service(Uri uri, string project, string password, IWebProxy proxy)
-            : this(uri, project, password, new RetryWithExponentialBackoffHttpClientHandler(proxy))
+        public TimeSpan Timeout
         {
+            get
+            {
+                return _httpClient.Timeout;
+            }
+            set
+            {
+                _httpClient.Timeout = value;
+            }
         }
 
         /// <summary>
@@ -67,38 +76,5 @@ namespace ReportPortal.Client
         public string Project { get; set; }
 
         public Uri BaseUri { get; set; }
-    }
-
-    public class RetryWithExponentialBackoffHttpClientHandler : DelegatingHandler
-    {
-        public RetryWithExponentialBackoffHttpClientHandler()
-            : this(new HttpClientHandler())
-        {
-        }
-
-        public RetryWithExponentialBackoffHttpClientHandler(IWebProxy proxy)
-            : this(new HttpClientHandler { Proxy = proxy })
-        {
-        }
-
-        public RetryWithExponentialBackoffHttpClientHandler(HttpMessageHandler innerHandler)
-            : base(innerHandler)
-        {
-        }
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            HttpResponseMessage response = null;
-
-            for (int i = 0; i < 3; i++)
-            {
-                response = await base.SendAsync(request, cancellationToken);
-                if (response.IsSuccessStatusCode)
-                {
-                    return response;
-                }
-            }
-            return response;
-        }
     }
 }
